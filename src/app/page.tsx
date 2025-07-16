@@ -1,6 +1,7 @@
 import "./page.css";
 
-import Input from "@/components/chatbot/input";
+import Input from "@/components/chatbot/Input"
+import DoclingPreview from "@/components/DoclingPreview";
 
 export default function Home() {
   const handlePromptSubmit = (prompt: string) => {
@@ -23,7 +24,7 @@ export default function Home() {
         </div>
       </div>
       <div className="panel right">
-
+        <DoclingPreview />
       </div>
     </div>
   );
