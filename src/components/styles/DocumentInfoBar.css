@@ -1,0 +1,72 @@
+.document-info-bar {
+  background-color: #f8f8f8;
+  border-radius: 6px 6px 0px 0px;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: 32px;
+  flex: 0;
+}
+
+.document-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.document-details {
+  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.size-info {
+  color: #666;
+  font-size: 13px;
+}
+
+.no-document {
+  color: #666;
+  font-size: 14.5px;
+}
+
+.document-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 16px;
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  padding: 0;
+  color: #0066cc;
+  transition: background-color 0.2s;
+}
+
+.icon-button:hover {
+  background-color: rgba(0, 102, 204, 0.1);
+}
+
+.upload-icon {
+  color: #0066cc;
+}
+
+.remove-icon {
+  color: #cc0000;
+}
+
+.remove-icon:hover {
+  background-color: rgba(204, 0, 0, 0.1);
+}

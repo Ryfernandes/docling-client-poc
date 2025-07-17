@@ -8,20 +8,31 @@
 }
 
 .panel {
-  flex: 1;
-  padding: 1rem 2rem;
   border-radius: 0.5rem;
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-  overflow-y: auto;
+  background-color: white;
 }
 
 .left {
-  background-color: white;
+  flex: 2;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 1rem;
 }
 
 .right {
-  background-color: gray;
+  padding: 0rem;
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-left {
+  padding: 0rem;
+  flex: 0;
+}
+
+.bottom-left {
+  flex: 1;
+  padding: 0rem;
 }

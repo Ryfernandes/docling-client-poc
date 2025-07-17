@@ -1,0 +1,52 @@
+.selection-info-bar {
+  background-color: #f8f8f8;
+  border-radius: 6px 6px 0px 0px;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: 32px
+}
+
+.document-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.document-details {
+  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.selection-list {
+  overflow-y: auto;
+  height: 200px;
+  padding: 0.5rem 0rem;
+}
+
+.crefs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cref-item {
+  padding: 0.5rem 1rem;
+  font-size: 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cref-item:last-child {
+  border-bottom: none;
+}
+
+.no-selection {
+  color: #666;
+  font-size: 14px;
+  padding: 0.5rem 1rem;
+}
