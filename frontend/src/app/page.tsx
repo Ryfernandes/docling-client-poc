@@ -2,7 +2,7 @@
 
 import "./page.css";
 
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 
 import ChatbotPanel, { Message } from "@/components/ChatbotPanel"
 import DoclingPreview from "@/components/DoclingPreview";
@@ -18,9 +18,63 @@ export default function Home() {
     lastModified?: Date;
   } | null>(null);
   const [selectedCrefs, setSelectedCrefs] = useState<string[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handlePromptSubmit = (prompt: string) => {
-    alert(`Prompt submitted: ${prompt}`);
+  useEffect(() => {
+    async function setup() {
+      await fetch("http://127.0.0.1:8001/setup", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      });
+    }
+
+    setup();
+  }, []);
+
+  const handlePromptSubmit = async (prompt: string) => {
+    try {
+      setMessages(prevMessages => [...prevMessages, 
+        {
+          id: Date.now().toString(),
+          text: prompt,
+          sender: 'user',
+          timestamp: new Date()
+        }
+      ]);
+
+      setLoading(true);
+
+      const response = await fetch("http://127.0.0.1:8001/message/", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query: prompt, context: "None. Start of conversation." })
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      
+      setLoading(false);
+
+      setMessages(prevMessages => [...prevMessages, 
+        {
+          id: Date.now().toString(),
+          text: data.response,
+          sender: 'bot',
+          timestamp: new Date()
+        }
+      ]);
+    } catch (error) {
+      console.error('Error calling Python API', error);
+      setLoading(false);
+    }
   }
 
   const handleDocumentLoad = (document: any) => {
@@ -46,7 +100,7 @@ export default function Home() {
           <SelectionInfo selectedCrefs={selectedCrefs} />
         </div>
         <div className="panel bottom-left">
-          <ChatbotPanel onPromptSubmit={handlePromptSubmit} messages={[]} />
+          <ChatbotPanel loading={loading} onPromptSubmit={handlePromptSubmit} messages={messages} />
         </div>
       </div>
       <div className="panel right">
