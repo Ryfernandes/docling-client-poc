@@ -2,7 +2,7 @@
 
 import "./page.css";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import ChatbotPanel, { Message } from "@/components/ChatbotPanel"
 import DoclingPreview from "@/components/DoclingPreview";
@@ -20,6 +20,8 @@ export default function Home() {
   const [selectedCrefs, setSelectedCrefs] = useState<string[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const numMessages = useRef(0);
 
   useEffect(() => {
     async function setup() {
@@ -52,9 +54,86 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ query: prompt, context: "None. Start of conversation." })
+        body: JSON.stringify({ query: prompt })
       });
 
+      if (!response.body) {
+        console.error("ReadableStream not supported");
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const parts = buffer.split("\n");
+        buffer = parts.pop() || "";
+
+        console.log(parts);
+
+        for (const part of parts) {
+          numMessages.current += 1;
+          const id = numMessages.current.toString();
+
+          const line = part.trim();
+          if (!line) continue;
+
+          const json = JSON.parse(line);
+
+          if (json.type === 'message') {
+            setMessages(prevMessages => [...prevMessages, 
+              {
+                id: id,
+                text: json.content,
+                sender: 'bot',
+                timestamp: new Date()
+              }
+            ]);
+          }
+          if (json.type === 'tool_call') {
+            setMessages(prevMessages => [...prevMessages, 
+              {
+                id: id,
+                text: `🛠️ Using tool "${json.name}"`,
+                sender: 'bot',
+                timestamp: new Date()
+              }
+            ]);
+          }
+          if (json.type === 'tool_result') {
+            /*
+            setMessages(prevMessages => [...prevMessages, 
+              {
+                id: id,
+                text: "✅ Tool call successful",
+                sender: 'bot',
+                timestamp: new Date()
+              }
+            ]);
+            */
+          }
+          if (json.type === 'tool_error') {
+            setMessages(prevMessages => [...prevMessages, 
+              {
+                id: id,
+                text: json.content,
+                sender: 'bot',
+                timestamp: new Date()
+              }
+            ]);
+          }
+        }
+      }
+
+      setLoading(false);
+
+      /*
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
@@ -71,6 +150,7 @@ export default function Home() {
           timestamp: new Date()
         }
       ]);
+      */
     } catch (error) {
       console.error('Error calling Python API', error);
       setLoading(false);

@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 
 import '@/components/styles/ChatbotPanel.css';
 
+import ReactMarkdown from 'react-markdown';
+
 export interface Message {
   id: string;
   text: string;
@@ -72,7 +74,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, l
             key={message.id}
             className={`message ${message.sender === 'user' ? 'message-user' : 'message-bot'}`}
           >
-            {message.text}
+            <ReactMarkdown>{message.text}</ReactMarkdown>
           </div>
         ))}
         {loading && (

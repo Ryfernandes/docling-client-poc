@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -18,7 +19,6 @@ app.add_middleware(
 
 class ChatMessage(BaseModel):
     query: str
-    context: str
 
 @app.post("/setup/")
 async def setup_client():
@@ -28,6 +28,10 @@ async def setup_client():
 
 @app.post("/message/")
 async def send_message(message: ChatMessage):
-    print(f"Query: {message.query}, Context: {message.context}")
-    (response, context) = await mcp_client.process_monitored_query(message.query, message.context, careful=False)
-    return {"response": response, "context": context}
+    print(f"Query: {message.query}")
+    return StreamingResponse(mcp_client.process_monitored_query(message.query, careful=False), media_type="application/x-ndjson")
+
+@app.post("/clear_context/")
+async def clear_context():
+    mcp_client.clear_context()
+    return {"message": "Context cleared."}

@@ -46,9 +46,13 @@
 
 .message {
   max-width: 80%;
-  padding: 10px 14px;
+  padding: 14px 14px;
   border-radius: 12px;
   word-break: break-word;
+}
+
+.message p {
+  margin: 0;
 }
 
 .message-user {

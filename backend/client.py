@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, AsyncGenerator
 from contextlib import AsyncExitStack
 
 from mcp import ClientSession, StdioServerParameters
@@ -12,6 +12,8 @@ import os
 
 from pydantic import BaseModel
 
+import json
+
 load_dotenv()
 
 class MCPClient:
@@ -21,6 +23,7 @@ class MCPClient:
         self.anthropic = Anthropic()
         self.max_iterations = 20  # Prevent infinite loops
         self.model = model
+        self.context = "None. Start of conversation."
     
     async def connect_to_server(self, server_url: str = "http://localhost:8000/sse"):
         """Connect to an MCP server_script_path
@@ -40,17 +43,15 @@ class MCPClient:
         tools = response.tools
         print("\nConnected to server with tools:", [tool.name for tool in tools])
 
-    async def process_monitored_query(self, query: str, conversation_summary: Optional[str] = None, careful: Optional[bool] = True) -> tuple[str, str]:
+    async def process_monitored_query(self, query: str, careful: Optional[bool] = True) -> AsyncGenerator[str, None]:
         """Process a query using Claude and available tools with agentic behavior"""
         messages = []
         self.query_cost = 0
 
-        if conversation_summary:
-            messages.append({
-                "role": "assistant",
-                "content": f"Previous conversation context: {conversation_summary}"
-            })
-
+        messages.append({
+            "role": "assistant",
+            "content": f"Previous conversation context: {self.context}"
+        })
 
         messages.append({
             "role": "user",
@@ -71,8 +72,9 @@ class MCPClient:
         
         while iteration < self.max_iterations:
             iteration += 1
-            
+
             response = self.anthropic.messages.create(
+                system="You are a Docling Document creation/editing agent. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
                 model=self.model,
                 max_tokens=1000,
                 messages=messages,
@@ -94,25 +96,30 @@ class MCPClient:
             # Process all content in the response
             for content in response.content:
                 if content.type == "text":
-                    execution_log.append(f"Claude: {content.text}")
                     messages.append({
                         "role": "assistant",
                         "content": content.text
                     })
+
+                    yield json.dumps({'type': 'message', 'content': content.text}) + '\n'
                     
                 elif content.type == "tool_use":
                     has_tool_calls = True
                     tool_name = content.name
                     tool_args = content.input
                     
-                    execution_log.append(f"🔧 Calling tool '{tool_name}' with args: {tool_args}")
                     print(f"🔧 Calling tool '{tool_name}' with args: {tool_args}")
+                    yield json.dumps({'type': 'tool_call', 'name': tool_name, 'args': tool_args}) + '\n'
                     
                     try:
                         result = await self.session.call_tool(tool_name, tool_args)
-                        execution_log.append(f"✅ Tool result: {result.content}")
                         print(f"✅ Tool result: {result.content}")
                         
+                        try: 
+                          yield json.dumps({'type': 'tool_result', 'content': result.content[0].dict()}) + '\n'
+                        except Exception as e:
+                            print(f"Error yielding tool result: {e}")
+
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": content.id,
@@ -121,6 +128,7 @@ class MCPClient:
                         
                     except Exception as e:
                         execution_log.append(f"❌ Tool error: {str(e)}")
+                        yield json.dumps({'type': 'tool_error', 'content': str(e)}) + '\n'
 
                         tool_results.append({
                             "type": "tool_result",
@@ -137,11 +145,10 @@ class MCPClient:
                 break
         
         if iteration >= self.max_iterations:
-            execution_log.append(f"⚠️ Reached maximum iterations ({self.max_iterations})")
+            yield "Reached maximum iterations, stopping execution.\n\n"
 
         print(f"💰 Total Cost: ${round(self.query_cost, 4)}")
 
-        """
         print("\nSystem: Compressing conversation context...")
         
         summary = self.anthropic.messages.create(
@@ -153,12 +160,14 @@ class MCPClient:
             }]
         )
 
-        new_summary = summary.content[0]
-        """
+        self.context = summary.content[0]
 
-        new_summary = conversation_summary
-
-        return "[newline]".join(execution_log), new_summary
+        print(f"New context: {self.context}")
+    
+    def clear_context(self):
+        """Clear the conversation context"""
+        self.context = "None. Start of conversation."
+        print("Context cleared.")
 
     def aggregate_anthropic_response_info(self, response: Message, display = True):
         input_tokens_cost = response.usage.input_tokens / 1000000 * 3

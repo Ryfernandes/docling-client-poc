@@ -147,8 +147,6 @@ const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs }
       <div className="document-content">
         {
           items.map(([item, level], index) => {
-            console.log(item);
-
             const representation = itemRepresentation(item, level, index);
 
             if (!representation) return null;
