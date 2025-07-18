@@ -13,6 +13,7 @@ import os
 from pydantic import BaseModel
 
 import json
+import aiohttp
 
 load_dotenv()
 
@@ -43,8 +44,16 @@ class MCPClient:
         tools = response.tools
         print("\nConnected to server with tools:", [tool.name for tool in tools])
 
-    async def process_monitored_query(self, query: str, careful: Optional[bool] = True) -> AsyncGenerator[str, None]:
+    async def process_monitored_query(self, query: str, seed_document: object, careful: Optional[bool] = True) -> AsyncGenerator[str, None]:
         """Process a query using Claude and available tools with agentic behavior"""
+        # Load the seed document into the context
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "http://localhost:8000/document",
+                json={"document": seed_document}
+            ) as resp:
+                await resp.release()
+
         messages = []
         self.query_cost = 0
 
@@ -74,7 +83,7 @@ class MCPClient:
             iteration += 1
 
             response = self.anthropic.messages.create(
-                system="You are a Docling Document creation/editing agent. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
+                system="You are a Docling Document creation/editing agent that makes changes to a document that is already provided internally. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
                 model=self.model,
                 max_tokens=1000,
                 messages=messages,
@@ -113,20 +122,29 @@ class MCPClient:
                     
                     try:
                         result = await self.session.call_tool(tool_name, tool_args)
-                        print(f"✅ Tool result: {result.content}")
-                        
+                        result_content = result.content[0].dict()
+
                         try: 
-                          yield json.dumps({'type': 'tool_result', 'content': result.content[0].dict()}) + '\n'
+                          yield json.dumps({'type': 'tool_result', 'content': result_content}) + '\n'
                         except Exception as e:
                             print(f"Error yielding tool result: {e}")
+
+                        result_content = json.loads(result_content['text'])
+
+                        if 'document' in result_content:
+                            del result_content['document']
+                        print(f"✅ Tool result: {result_content}")
+
+                        content_string = json.dumps(result_content, indent=2)
 
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": content.id,
-                            "content": result.content
+                            "content": content_string,
                         })
                         
                     except Exception as e:
+                        print(f"❌ Tool error: {str(e)}")
                         execution_log.append(f"❌ Tool error: {str(e)}")
                         yield json.dumps({'type': 'tool_error', 'content': str(e)}) + '\n'
 

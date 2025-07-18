@@ -9,9 +9,10 @@ import DoclingPreview from "@/components/DoclingPreview";
 import DocumentInfoBar from "@/components/DocumentInfoBar";
 import SelectionInfo from "@/components/SelectionInfo";
 import testBofa from '@/data/test-bofa.json';
+import test from "node:test";
 
 export default function Home() {
-  const [documentData, setDocumentData] = useState<any>(null);
+  const [documentData, setDocumentData] = useState<object>(testBofa);
   const [documentInfo, setDocumentInfo] = useState<{
     name: string;
     size: number;
@@ -54,7 +55,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ query: prompt })
+        body: JSON.stringify({ query: prompt, document: documentData })
       });
 
       if (!response.body) {
@@ -107,6 +108,16 @@ export default function Home() {
             ]);
           }
           if (json.type === 'tool_result') {
+            if ('text' in json.content) {
+              const json_text = JSON.parse(json.content.text);
+
+              if ('document' in json_text) {
+                const doc = json_text.document;
+
+                setDocumentData(doc);
+              }
+            }
+
             /*
             setMessages(prevMessages => [...prevMessages, 
               {
@@ -167,11 +178,9 @@ export default function Home() {
   }
   
   const handleDocumentRemove = () => {
-    setDocumentData(null);
+    setDocumentData(testBofa);
     setDocumentInfo(null);
   }
-
-  const displayData = documentData || testBofa;
 
   return (
     <div className="page-container">
@@ -189,7 +198,7 @@ export default function Home() {
           onDocumentLoad={handleDocumentLoad}
           onDocumentRemove={handleDocumentRemove}
         />
-        <DoclingPreview data={displayData} setSelectedCrefs={setSelectedCrefs}/>
+        <DoclingPreview data={documentData} setSelectedCrefs={setSelectedCrefs}/>
       </div>
     </div>
   );
