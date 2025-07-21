@@ -56,6 +56,13 @@ const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
     reader.readAsText(file);
   };
 
+  const handleDocumentRemove = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    onDocumentRemove();
+  }
+
   const handleDownload = () => {
     if (!currentDocument || !documentData) return;
     
@@ -123,7 +130,7 @@ const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
               </svg>
             </button>
             
-            <button className="icon-button remove-icon" onClick={onDocumentRemove} title="Remove Document">
+            <button className="icon-button remove-icon" onClick={handleDocumentRemove} title="Remove Document">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
