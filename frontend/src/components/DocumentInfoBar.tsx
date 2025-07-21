@@ -7,7 +7,7 @@ interface DocumentInfoBarProps {
     size: number;
     lastModified?: Date;
   } | null;
-  documentData?: object;
+  documentData?: object | null;
   onDocumentLoad: (data: any) => void;
   onDocumentRemove: () => void;
 }

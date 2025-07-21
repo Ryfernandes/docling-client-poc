@@ -1,11 +1,13 @@
 .docling-preview {
   overflow-y: auto;
   padding: 1rem 0rem;
+  height: 100%;
 }
 
 .document-content {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
 }
 
 .document-item-container {
@@ -94,4 +96,21 @@
 
 .row-header {
   font-weight: 600;
+}
+
+.no-document-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;  /* Take remaining space */
+  min-height: 300px; /* Minimum height for small containers */
+  text-align: center;
+  color: #666;
+  font-size: 1.1rem;
+  padding: 2rem;
+}
+
+.no-document-message p {
+  margin: 0.5rem 0;
 }

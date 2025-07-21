@@ -8,12 +8,9 @@ import ChatbotPanel, { Message } from "@/components/ChatbotPanel"
 import DoclingPreview from "@/components/DoclingPreview";
 import DocumentInfoBar from "@/components/DocumentInfoBar";
 import SelectionInfo from "@/components/SelectionInfo";
-import testBofa from '@/data/test-bofa.json';
-import test from "node:test";
-import { clear } from "console";
 
 export default function Home() {
-  const [documentData, setDocumentData] = useState<object>(testBofa);
+  const [documentData, setDocumentData] = useState<object | null>(null);
   const [documentInfo, setDocumentInfo] = useState<{
     name: string;
     size: number;
@@ -56,131 +53,133 @@ export default function Home() {
   }
 
   const handlePromptSubmit = async (prompt: string) => {
-    try {
-      setMessages(prevMessages => [...prevMessages, 
-        {
-          id: Date.now().toString(),
-          text: prompt,
-          sender: 'user',
-          timestamp: new Date()
+    if (documentData) {
+       try {
+        setMessages(prevMessages => [...prevMessages, 
+          {
+            id: Date.now().toString(),
+            text: prompt,
+            sender: 'user',
+            timestamp: new Date()
+          }
+        ]);
+
+        setLoading(true);
+
+        const response = await fetch("http://127.0.0.1:8001/message/", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ query: prompt, document: documentData, selectedCrefs: selectedCrefs })
+        });
+
+        if (!response.body) {
+          console.error("ReadableStream not supported");
+          return;
         }
-      ]);
 
-      setLoading(true);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
 
-      const response = await fetch("http://127.0.0.1:8001/message/", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ query: prompt, document: documentData, selectedCrefs: selectedCrefs })
-      });
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
 
-      if (!response.body) {
-        console.error("ReadableStream not supported");
-        return;
-      }
+          buffer += decoder.decode(value, { stream: true })
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buffer = "";
+          const parts = buffer.split("\n");
+          buffer = parts.pop() || "";
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+          console.log(parts);
 
-        buffer += decoder.decode(value, { stream: true })
+          for (const part of parts) {
+            numMessages.current += 1;
+            const id = numMessages.current.toString();
 
-        const parts = buffer.split("\n");
-        buffer = parts.pop() || "";
+            const line = part.trim();
+            if (!line) continue;
 
-        console.log(parts);
+            let json;
 
-        for (const part of parts) {
-          numMessages.current += 1;
-          const id = numMessages.current.toString();
-
-          const line = part.trim();
-          if (!line) continue;
-
-          let json;
-
-          try {
-            json = JSON.parse(line);
-          } catch (error) {
-            console.error("Error parsing JSON:", line, error);
-            continue;
-          }
-
-          if (json.type === 'message') {
-            setMessages(prevMessages => [...prevMessages, 
-              {
-                id: id,
-                text: json.content,
-                sender: 'bot',
-                timestamp: new Date()
-              }
-            ]);
-          }
-          if (json.type === 'tool_call') {
-            setMessages(prevMessages => [...prevMessages, 
-              {
-                id: id,
-                text: `🛠️ Using tool "${json.name}"`,
-                sender: 'bot',
-                timestamp: new Date()
-              }
-            ]);
-          }
-          if (json.type === 'tool_result') {
-            if ('text' in json.content) {
-              const json_text = JSON.parse(json.content.text);
-
-              if ('document' in json_text) {
-                const doc = json_text.document;
-
-                setDocumentData(doc);
-              }
+            try {
+              json = JSON.parse(line);
+            } catch (error) {
+              console.error("Error parsing JSON:", line, error);
+              continue;
             }
 
-            /*
-            setMessages(prevMessages => [...prevMessages, 
-              {
-                id: id,
-                text: "✅ Tool call successful",
-                sender: 'bot',
-                timestamp: new Date()
+            if (json.type === 'message') {
+              setMessages(prevMessages => [...prevMessages, 
+                {
+                  id: id,
+                  text: json.content,
+                  sender: 'bot',
+                  timestamp: new Date()
+                }
+              ]);
+            }
+            if (json.type === 'tool_call') {
+              setMessages(prevMessages => [...prevMessages, 
+                {
+                  id: id,
+                  text: `🛠️ Using tool "${json.name}"`,
+                  sender: 'bot',
+                  timestamp: new Date()
+                }
+              ]);
+            }
+            if (json.type === 'tool_result') {
+              if ('text' in json.content) {
+                const json_text = JSON.parse(json.content.text);
+
+                if ('document' in json_text) {
+                  const doc = json_text.document;
+
+                  setDocumentData(doc);
+                }
               }
-            ]);
-            */
-          }
-          if (json.type === 'tool_error') {
-            setMessages(prevMessages => [...prevMessages, 
-              {
-                id: id,
-                text: json.content,
-                sender: 'bot',
-                timestamp: new Date()
-              }
-            ]);
-          }
-          if (json.type === 'max_iterations') {
-            setMessages(prevMessages => [...prevMessages, 
-              {
-                id: id,
-                text: "Reached maximum iterations, stopping execution.",
-                sender: 'bot',
-                timestamp: new Date()
-              }
-            ]);
+
+              /*
+              setMessages(prevMessages => [...prevMessages, 
+                {
+                  id: id,
+                  text: "✅ Tool call successful",
+                  sender: 'bot',
+                  timestamp: new Date()
+                }
+              ]);
+              */
+            }
+            if (json.type === 'tool_error') {
+              setMessages(prevMessages => [...prevMessages, 
+                {
+                  id: id,
+                  text: json.content,
+                  sender: 'bot',
+                  timestamp: new Date()
+                }
+              ]);
+            }
+            if (json.type === 'max_iterations') {
+              setMessages(prevMessages => [...prevMessages, 
+                {
+                  id: id,
+                  text: "Reached maximum iterations, stopping execution.",
+                  sender: 'bot',
+                  timestamp: new Date()
+                }
+              ]);
+            }
           }
         }
-      }
 
-      setLoading(false);
-    } catch (error) {
-      console.error('Error calling Python API', error);
-      setLoading(false);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error calling Python API', error);
+        setLoading(false);
+      }
     }
   }
 
@@ -195,7 +194,7 @@ export default function Home() {
   }
   
   const handleDocumentRemove = () => {
-    setDocumentData(testBofa);
+    setDocumentData(null);
     setDocumentInfo(null);
     clearContext();
   }
@@ -207,7 +206,7 @@ export default function Home() {
           <SelectionInfo selectedCrefs={selectedCrefs} />
         </div>
         <div className="panel bottom-left">
-          <ChatbotPanel loading={loading} onPromptSubmit={handlePromptSubmit} messages={messages} clearContext={clearContext} />
+          <ChatbotPanel active={documentData != null} loading={loading} onPromptSubmit={handlePromptSubmit} messages={messages} clearContext={clearContext} />
         </div>
       </div>
       <div className="panel right">

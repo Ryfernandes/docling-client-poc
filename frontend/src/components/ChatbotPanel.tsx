@@ -18,9 +18,10 @@ interface ChatbotPanelProps {
   messages: Message[];
   loading?: boolean;
   clearContext?: () => void;
+  active: boolean;
 }
 
-const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, loading, clearContext }) => {
+const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, loading, clearContext, active }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +46,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, l
   };
 
   const handleSendMessage = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || ! active) return;
     
     // Add user message
     const userMessage: Message = {
@@ -107,7 +108,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, l
         <button 
           className="send-button"
           onClick={handleSendMessage}
-          disabled={!input.trim() || loading}
+          disabled={!input.trim() || loading || !active}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"></line>

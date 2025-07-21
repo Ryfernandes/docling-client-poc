@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { iterateDocumentItems, isDocling, type DoclingDocument } from '@docling/docling-core';
 
 import '@/components/styles/DoclingPreview.css';
+import { handleDocumentUpload } from './utils/documentUtils';
 
 interface DoclingPreviewProps {
   data: any;
@@ -145,23 +146,32 @@ const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs }
   return (
     <div ref={scrollBoxRef} className="docling-preview">
       <div className="document-content">
-        {
-          items.map(([item, level], index) => {
-            const representation = itemRepresentation(item, level, index);
+        {data == null ? (
+          <div className="no-document-message">
+            <p>No document loaded</p>
+            <p>Please use the upload button in the toolbar to get started.</p>
+          </div>
+        ) : (
+          <>
+            {
+              items.map(([item, level], index) => {
+                const representation = itemRepresentation(item, level, index);
 
-            if (!representation) return null;
+                if (!representation) return null;
 
-            return (
-              <div 
-                key={item.self_ref || index} 
-                className={`document-item-container ${selected[index] ? 'selected' : ''}`} 
-                onClick={(e) => handleSelect(index, e)}
-              >
-                {representation}
-              </div>
-            );
-          })
-        }
+                return (
+                  <div 
+                    key={item.self_ref || index} 
+                    className={`document-item-container ${selected[index] ? 'selected' : ''}`} 
+                    onClick={(e) => handleSelect(index, e)}
+                  >
+                    {representation}
+                  </div>
+                );
+              })
+            }
+          </>
+        )}
       </div>
     </div>
   );
