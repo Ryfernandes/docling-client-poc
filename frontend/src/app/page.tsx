@@ -8,6 +8,7 @@ import ChatbotPanel, { Message } from "@/components/ChatbotPanel"
 import DoclingPreview from "@/components/DoclingPreview";
 import DocumentInfoBar from "@/components/DocumentInfoBar";
 import SelectionInfo from "@/components/SelectionInfo";
+import CostInfo from "@/components/CostInfo";
 
 export default function Home() {
   const [documentData, setDocumentData] = useState<object | null>(null);
@@ -209,7 +210,12 @@ export default function Home() {
     <div className="page-container">
       <div className="left">
         <div className="panel top-left">
-          <SelectionInfo selectedCrefs={selectedCrefs} />
+          <div className="panel cost">
+            <CostInfo />
+          </div>
+          <div className="panel selection">
+            <SelectionInfo selectedCrefs={selectedCrefs} />
+          </div>
         </div>
         <div className="panel bottom-left">
           <ChatbotPanel active={documentData != null} loading={loading} onPromptSubmit={handlePromptSubmit} messages={messages} clearContext={clearContext} />

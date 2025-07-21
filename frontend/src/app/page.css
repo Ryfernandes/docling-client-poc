@@ -30,10 +30,21 @@
 .top-left {
   padding: 0rem;
   flex: 0;
+  display: flex;
+  gap: 1rem;
+  background-color: transparent;
 }
 
 .bottom-left {
   flex: 1;
   padding: 0rem;
   min-height: 0;
+}
+
+.cost {
+  flex: 1;
+}
+
+.selection {
+  flex: 1;
 }

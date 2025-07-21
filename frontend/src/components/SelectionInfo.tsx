@@ -17,7 +17,7 @@ const SelectionInfo: React.FC<SelectionInfoProps> = ({
       <div className="selection-info-bar">
         <div className="document-info">
           <span className="document-details">
-            Selected Items
+            ✅ Selected items
           </span>
         </div>
       </div>

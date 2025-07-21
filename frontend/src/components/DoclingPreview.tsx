@@ -5,7 +5,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { iterateDocumentItems, isDocling, type DoclingDocument } from '@docling/docling-core';
 
 import '@/components/styles/DoclingPreview.css';
-import { handleDocumentUpload } from './utils/documentUtils';
 
 interface DoclingPreviewProps {
   data: any;

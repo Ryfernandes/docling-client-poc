@@ -1,0 +1,32 @@
+.cost-info-bar {
+  background-color: #f8f8f8;
+  border-radius: 6px 6px 0px 0px;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: 32px
+}
+
+.document-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.document-details {
+  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.cost-list {
+  overflow-y: auto;
+  height: 200px;
+  padding: 1rem;
+  color: #666;
+  font-size: 14px;
+}
