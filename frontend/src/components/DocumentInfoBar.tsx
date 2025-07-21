@@ -7,12 +7,14 @@ interface DocumentInfoBarProps {
     size: number;
     lastModified?: Date;
   } | null;
+  documentData?: object;
   onDocumentLoad: (data: any) => void;
   onDocumentRemove: () => void;
 }
 
 const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
   currentDocument,
+  documentData,
   onDocumentLoad,
   onDocumentRemove
 }) => {
@@ -54,6 +56,29 @@ const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
     reader.readAsText(file);
   };
 
+  const handleDownload = () => {
+    if (!currentDocument || !documentData) return;
+    
+    // Create a blob with the JSON data
+    const blob = new Blob([JSON.stringify(documentData, null, 2)], { type: 'application/json' });
+    
+    // Create a download URL
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary link to trigger the download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = currentDocument.name;
+    
+    // Append to body, click, and then remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the URL
+    URL.revokeObjectURL(url);
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' bytes';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -89,12 +114,22 @@ const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
         </label>
         
         {currentDocument && (
-          <button className="icon-button remove-icon" onClick={onDocumentRemove} title="Remove Document">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+          <>
+            <button className="icon-button download-icon" onClick={handleDownload} title="Download Document">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            
+            <button className="icon-button remove-icon" onClick={onDocumentRemove} title="Remove Document">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </>
         )}
       </div>
     </div>

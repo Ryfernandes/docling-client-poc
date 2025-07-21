@@ -10,6 +10,7 @@ import DocumentInfoBar from "@/components/DocumentInfoBar";
 import SelectionInfo from "@/components/SelectionInfo";
 import testBofa from '@/data/test-bofa.json';
 import test from "node:test";
+import { clear } from "console";
 
 export default function Home() {
   const [documentData, setDocumentData] = useState<object>(testBofa);
@@ -37,6 +38,23 @@ export default function Home() {
     setup();
   }, []);
 
+  const clearContext = async () => {
+    try {
+      await fetch("http://127.0.0.1:8001/clear_context/", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query: prompt, document: documentData, selectedCrefs: selectedCrefs })
+      });
+
+      setMessages([]);
+      setSelectedCrefs([]);
+    } catch (error) {
+      console.error('Error clearing context', error);
+    }
+  }
+
   const handlePromptSubmit = async (prompt: string) => {
     try {
       setMessages(prevMessages => [...prevMessages, 
@@ -55,7 +73,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ query: prompt, document: documentData })
+        body: JSON.stringify({ query: prompt, document: documentData, selectedCrefs: selectedCrefs })
       });
 
       if (!response.body) {
@@ -85,7 +103,14 @@ export default function Home() {
           const line = part.trim();
           if (!line) continue;
 
-          const json = JSON.parse(line);
+          let json;
+
+          try {
+            json = JSON.parse(line);
+          } catch (error) {
+            console.error("Error parsing JSON:", line, error);
+            continue;
+          }
 
           if (json.type === 'message') {
             setMessages(prevMessages => [...prevMessages, 
@@ -139,29 +164,20 @@ export default function Home() {
               }
             ]);
           }
+          if (json.type === 'max_iterations') {
+            setMessages(prevMessages => [...prevMessages, 
+              {
+                id: id,
+                text: "Reached maximum iterations, stopping execution.",
+                sender: 'bot',
+                timestamp: new Date()
+              }
+            ]);
+          }
         }
       }
 
       setLoading(false);
-
-      /*
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      
-      setLoading(false);
-
-      setMessages(prevMessages => [...prevMessages, 
-        {
-          id: Date.now().toString(),
-          text: data.response,
-          sender: 'bot',
-          timestamp: new Date()
-        }
-      ]);
-      */
     } catch (error) {
       console.error('Error calling Python API', error);
       setLoading(false);
@@ -175,11 +191,13 @@ export default function Home() {
       size: document.size,
       lastModified: document.lastModified
     });
+    clearContext();
   }
   
   const handleDocumentRemove = () => {
     setDocumentData(testBofa);
     setDocumentInfo(null);
+    clearContext();
   }
 
   return (
@@ -189,12 +207,13 @@ export default function Home() {
           <SelectionInfo selectedCrefs={selectedCrefs} />
         </div>
         <div className="panel bottom-left">
-          <ChatbotPanel loading={loading} onPromptSubmit={handlePromptSubmit} messages={messages} />
+          <ChatbotPanel loading={loading} onPromptSubmit={handlePromptSubmit} messages={messages} clearContext={clearContext} />
         </div>
       </div>
       <div className="panel right">
         <DocumentInfoBar
           currentDocument={documentInfo}
+          documentData={documentData}
           onDocumentLoad={handleDocumentLoad}
           onDocumentRemove={handleDocumentRemove}
         />

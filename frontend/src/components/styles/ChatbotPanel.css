@@ -119,3 +119,11 @@
   background-color: #cccccc;
   cursor: not-allowed;
 }
+
+.reload-icon {
+  color: #0066cc;
+}
+
+.reload-icon:hover {
+  background-color: rgba(0, 102, 204, 0.1);
+}

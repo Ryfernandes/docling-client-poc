@@ -20,6 +20,7 @@ app.add_middleware(
 class ChatMessage(BaseModel):
     query: str
     document: object
+    selectedCrefs: list[str]
 
 @app.post("/setup/")
 async def setup_client():
@@ -30,7 +31,7 @@ async def setup_client():
 @app.post("/message/")
 async def send_message(message: ChatMessage):
     print(f"Query: {message.query}")
-    return StreamingResponse(mcp_client.process_monitored_query(message.query, message.document, careful=False), media_type="application/x-ndjson")
+    return StreamingResponse(mcp_client.process_monitored_query(message.query, message.document, message.selectedCrefs, careful=False), media_type="application/x-ndjson")
 
 @app.post("/clear_context/")
 async def clear_context():

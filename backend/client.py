@@ -15,6 +15,13 @@ from pydantic import BaseModel
 import json
 import aiohttp
 
+from docling_core.types.doc.document import (
+  DoclingDocument,
+  NodeItem,
+  RefItem,
+  TextItem,
+)
+
 load_dotenv()
 
 class MCPClient:
@@ -44,7 +51,16 @@ class MCPClient:
         tools = response.tools
         print("\nConnected to server with tools:", [tool.name for tool in tools])
 
-    async def process_monitored_query(self, query: str, seed_document: object, careful: Optional[bool] = True) -> AsyncGenerator[str, None]:
+    def get_cref_content(self, doc: DoclingDocument, cref: str) -> NodeItem:
+        ref = RefItem(cref=cref)
+        node = ref.resolve(doc=doc)
+
+        if isinstance(node, TextItem):
+            return f"'{node.label}' item. Text at document anchor {cref}: '{node.text}'"
+        else:
+            return f"'{node.label}' item (no text content)"        
+
+    async def process_monitored_query(self, query: str, seed_document: object, selectedCrefs: list[str], careful: Optional[bool] = True) -> AsyncGenerator[str, None]:
         """Process a query using Claude and available tools with agentic behavior"""
         # Load the seed document into the context
         async with aiohttp.ClientSession() as session:
@@ -54,13 +70,12 @@ class MCPClient:
             ) as resp:
                 await resp.release()
 
+        # Get content from selected crefs
+        document = DoclingDocument.model_validate(seed_document)
+        selections = [f"{cref}: {self.get_cref_content(document, cref)}" for cref in selectedCrefs]
+
         messages = []
         self.query_cost = 0
-
-        messages.append({
-            "role": "assistant",
-            "content": f"Previous conversation context: {self.context}"
-        })
 
         messages.append({
             "role": "user",
@@ -78,12 +93,29 @@ class MCPClient:
         
         execution_log = []
         iteration = 0
+
+        print(f"Using context: {self.context}")
         
         while iteration < self.max_iterations:
             iteration += 1
 
             response = self.anthropic.messages.create(
-                system="You are a Docling Document creation/editing agent that makes changes to a document that is already provided internally. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
+                system=[
+                    {
+                        "type": "text",
+                        "text": "You are a Docling Document creation/editing agent that makes changes to a document that is already provided internally. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
+                        "cache_control": {"type": "ephemeral"}
+                    },
+                    {
+                        "type": "text",
+                        "text": f"Previous conversation context: {self.context}",
+                        "cache_control": {"type": "ephemeral"}
+                    },
+                    {
+                        "type": "text",
+                        "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary.",
+                    }
+                ],
                 model=self.model,
                 max_tokens=1000,
                 messages=messages,
@@ -163,7 +195,7 @@ class MCPClient:
                 break
         
         if iteration >= self.max_iterations:
-            yield "Reached maximum iterations, stopping execution.\n\n"
+            yield json.dumps({'type': 'max_iterations'}) + '\n'
 
         print(f"💰 Total Cost: ${round(self.query_cost, 4)}")
 
