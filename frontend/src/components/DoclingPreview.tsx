@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { iterateDocumentItems, isDocling, type DoclingDocument } from '@docling/docling-core';
 
@@ -9,16 +9,15 @@ import '@/components/styles/DoclingPreview.css';
 interface DoclingPreviewProps {
   data: any;
   setSelectedCrefs: React.Dispatch<React.SetStateAction<string[]>>;
+  scrollBoxRef: React.RefObject<HTMLDivElement | null>;
 }
 
-const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs }) => {
+const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs, scrollBoxRef }) => {
   const [document, setDocument] = useState<DoclingDocument>({} as DoclingDocument);
   const [items, setItems] = useState<any[]>([]);
   const [crefs, setCrefs] = useState<string[]>([]);
   const [selected, setSelected] = useState<boolean[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
-
-  const scrollBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSelectedCrefs(crefs.filter((_, index) => selected[index]));
@@ -37,8 +36,6 @@ const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs }
       const docItems = iterateDocumentItems(document);
       setItems([...docItems]);
     }
-
-    scrollBoxRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [document]);
 
   useEffect(() => {

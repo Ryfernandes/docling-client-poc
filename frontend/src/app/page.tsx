@@ -22,6 +22,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [costs, setCosts] = useState<{ kind: string; cost: number; total: number }[]>([]);
 
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
   const numMessages = useRef(0);
 
   useEffect(() => {
@@ -208,6 +209,8 @@ export default function Home() {
       lastModified: document.lastModified
     });
     clearContext();
+
+    scrollBoxRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }
   
   const handleDocumentRemove = () => {
@@ -238,7 +241,7 @@ export default function Home() {
           onDocumentLoad={handleDocumentLoad}
           onDocumentRemove={handleDocumentRemove}
         />
-        <DoclingPreview data={documentData} setSelectedCrefs={setSelectedCrefs}/>
+        <DoclingPreview data={documentData} setSelectedCrefs={setSelectedCrefs} scrollBoxRef={scrollBoxRef}/>
       </div>
     </div>
   );
