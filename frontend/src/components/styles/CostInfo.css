@@ -45,3 +45,9 @@
 .cost-amount {
   width: 60px
 }
+
+.no-cost {
+  color: #666;
+  font-size: 14px;
+  padding: 0.5rem 1rem;
+}

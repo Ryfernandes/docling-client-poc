@@ -21,13 +21,21 @@ const SelectionInfo: React.FC<CostInfoProps> = ({ costs }) => {
       </div>
       
       <div className="cost-list">
-        {costs.slice().reverse().map((cost, index) => (
-          <div key={index} className="cost-item">
-            <span className="index">{costs.length - 1 - index}</span>
-            <span className="cost-amount">${cost.cost.toFixed(4)}</span>
-            <span>{cost.kind}</span>
+        {costs.length > 0 ? (
+          <>
+            {costs.slice().reverse().map((cost, index) => (
+              <div key={index} className="cost-item">
+                <span className="index">{costs.length - 1 - index}</span>
+                <span className="cost-amount">${cost.cost.toFixed(4)}</span>
+                <span>{cost.kind}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="no-cost">
+            No queries have been sent
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
