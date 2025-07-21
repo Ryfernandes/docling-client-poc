@@ -126,7 +126,9 @@ const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs }
         const end = Math.max(lastSelectedIndex, index);
         
         for (let i = start; i <= end; i++) {
-          newSelected[i] = !selected[index];
+          if (items[i][0].content_layer !== "furniture") {
+            newSelected[i] = !selected[index];
+          }
         }
         
         return newSelected;
