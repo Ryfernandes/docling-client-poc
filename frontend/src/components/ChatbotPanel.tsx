@@ -90,7 +90,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, l
         ))}
         {loading && (
           <div className="message message-bot">
-            Thinking...
+            <span className="thinking-message">Thinking...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
