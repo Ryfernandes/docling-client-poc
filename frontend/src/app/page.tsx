@@ -103,6 +103,8 @@ export default function Home() {
 
             let json;
 
+            console.log(line);
+
             try {
               json = JSON.parse(line);
             } catch (error) {
@@ -132,6 +134,10 @@ export default function Home() {
             }
             if (json.type === 'tool_result') {
               if ('text' in json.content) {
+                if (json.content.text.substring(0, 5) === "Error") {
+                  continue;
+                }
+
                 const json_text = JSON.parse(json.content.text);
 
                 if ('document' in json_text) {
@@ -156,7 +162,7 @@ export default function Home() {
               setMessages(prevMessages => [...prevMessages, 
                 {
                   id: id,
-                  text: json.content,
+                  text: `❌ Tool error: ${json.content}`,
                   sender: 'bot',
                   timestamp: new Date()
                 }

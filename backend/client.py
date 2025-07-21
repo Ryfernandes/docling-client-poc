@@ -113,7 +113,7 @@ class MCPClient:
                     },
                     {
                         "type": "text",
-                        "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary.",
+                        "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary. Note that when anchors are removed from a document, all other anchors of the same type change values to stay chronological. This affects all operations that require document anchors. To avoid this, delete anchors all at once with a single operation.",
                     }
                 ],
                 model=self.model,
