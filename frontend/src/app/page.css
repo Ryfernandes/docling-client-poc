@@ -42,9 +42,9 @@
 }
 
 .cost {
-  flex: 1;
+  flex: 4;
 }
 
 .selection {
-  flex: 1;
+  flex: 3;
 }

@@ -39,6 +39,7 @@
   padding: 0.5rem 1rem;
   font-size: 14px;
   border-bottom: 1px solid #f0f0f0;
+  color: #666;
 }
 
 .cref-item:last-child {

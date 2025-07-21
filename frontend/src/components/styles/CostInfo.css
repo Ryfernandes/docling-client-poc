@@ -26,7 +26,22 @@
 .cost-list {
   overflow-y: auto;
   height: 200px;
-  padding: 1rem;
+  padding: 0.5rem 0rem;
+}
+
+.cost-item {
   color: #666;
   font-size: 14px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.index {
+  width: 32px;
+}
+
+.cost-amount {
+  width: 60px
 }

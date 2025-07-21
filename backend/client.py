@@ -32,6 +32,7 @@ class MCPClient:
         self.max_iterations = 20  # Prevent infinite loops
         self.model = model
         self.context = "None. Start of conversation."
+        self.total_cost = 0.0
     
     async def connect_to_server(self, server_url: str = "http://localhost:8000/sse"):
         """Connect to an MCP server_script_path
@@ -122,7 +123,8 @@ class MCPClient:
                 tools=available_tools,
             )
 
-            self.aggregate_anthropic_response_info(response, display = True)
+            cost = self.aggregate_anthropic_response_info(response, display = True)
+            yield json.dumps({'type': 'cost', 'cost': cost, 'total': round(self.total_cost, 4), 'kind': 'Agent turn'}) + '\n'
 
             if careful: 
                 quit = input("Quit? ")
@@ -210,6 +212,9 @@ class MCPClient:
             }]
         )
 
+        cost = self.aggregate_anthropic_response_info(summary, display = False)
+        yield json.dumps({'type': 'cost', 'cost': cost, 'total': round(self.total_cost, 4), 'kind': 'Context compression'}) + '\n'
+
         self.context = summary.content[0]
 
         print(f"New context: {self.context}")
@@ -219,13 +224,16 @@ class MCPClient:
         self.context = "None. Start of conversation."
         print("Context cleared.")
 
-    def aggregate_anthropic_response_info(self, response: Message, display = True):
+    def aggregate_anthropic_response_info(self, response: Message, display = True) -> float:
         input_tokens_cost = response.usage.input_tokens / 1000000 * 3
         output_tokens_cost = response.usage.output_tokens / 1000000 * 15
         cache_creation_input_tokens_cost = response.usage.cache_creation_input_tokens / 1000000 * 3.75
         cache_read_input_tokens_cost = response.usage.cache_read_input_tokens / 1000000 * 0.3
 
-        self.query_cost += input_tokens_cost + output_tokens_cost + cache_creation_input_tokens_cost + cache_read_input_tokens_cost
+        total_cost = input_tokens_cost + output_tokens_cost + cache_creation_input_tokens_cost + cache_read_input_tokens_cost
+
+        self.query_cost += total_cost
+        self.total_cost += total_cost
         
         if display:
             print(f"\n🆔 ID: {response.id}")
@@ -257,6 +265,8 @@ class MCPClient:
             print(f"  🗂️ Cache Creation Tokens: {response.usage.cache_creation_input_tokens} tokens at $3.75/MTok = ${round(cache_creation_input_tokens_cost, 4)}")
             print(f"  🗂️ Cache Read Tokens: {response.usage.cache_read_input_tokens} tokens at $0.30/MTok = ${round(cache_read_input_tokens_cost, 4)}")
             print(f"  🧰 Server Tool Use: {response.usage.server_tool_use}")
+        
+        return total_cost
 
     async def cleanup(self):
         """Clean up resources"""

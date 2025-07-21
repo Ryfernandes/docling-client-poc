@@ -20,6 +20,7 @@ export default function Home() {
   const [selectedCrefs, setSelectedCrefs] = useState<string[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [costs, setCosts] = useState<{ kind: string; cost: number; total: number }[]>([]);
 
   const numMessages = useRef(0);
 
@@ -179,6 +180,15 @@ export default function Home() {
                 }
               ]);
             }
+            if (json.type === 'cost') {
+              setCosts(prevCosts => [...prevCosts, 
+                {
+                  kind: json.kind || 'General',
+                  cost: json.cost,
+                  total: json.total
+                }
+              ]);
+            }
           }
         }
 
@@ -211,7 +221,7 @@ export default function Home() {
       <div className="left">
         <div className="panel top-left">
           <div className="panel cost">
-            <CostInfo />
+            <CostInfo costs={costs}/>
           </div>
           <div className="panel selection">
             <SelectionInfo selectedCrefs={selectedCrefs} />
