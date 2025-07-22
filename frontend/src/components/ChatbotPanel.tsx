@@ -17,13 +17,14 @@ interface ChatbotPanelProps {
   onPromptSubmit: (prompt: string) => void;
   messages: Message[];
   loading?: boolean;
+  compressingContext?: boolean;
   clearContext?: () => void;
   active: boolean;
   onCancel?: () => void;
   canceling?: boolean;
 }
 
-const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, loading, clearContext, active, onCancel, canceling }) => {
+const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, loading, compressingContext, clearContext, active, onCancel, canceling }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +101,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, l
         ))}
         {loading && (
           <div className="message message-bot">
-            <span className="thinking-message">Thinking...</span>
+            <span className={`${compressingContext ? 'compressing-message': 'thinking-message'}`}>{compressingContext ? 'Compressing context...' : 'Thinking...'}</span>
           </div>
         )}
         <div ref={messagesEndRef} />

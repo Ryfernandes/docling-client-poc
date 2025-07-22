@@ -218,6 +218,8 @@ class MCPClient:
 
             if not self.cancel_requested:
                 print("\nSystem: Compressing conversation context...")
+
+                yield json.dumps({'type': 'compressing_context'}) + '\n'
                 
                 summary = self.anthropic.messages.create(
                     model=self.model,

@@ -22,6 +22,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [costs, setCosts] = useState<{ kind: string; cost: number; total: number }[]>([]);
   const [canceling, setCanceling] = useState(false);
+  const [compressingContext, setCompressingContext] = useState(false);
 
   const scrollBoxRef = useRef<HTMLDivElement>(null);
   const numMessages = useRef(0);
@@ -191,6 +192,9 @@ export default function Home() {
                 }
               ]);
             }
+            if (json.type === 'compressing_context') {
+              setCompressingContext(true);
+            }
             if (json.type === 'cancelled') {
               setMessages(prevMessages => [...prevMessages, 
                 {
@@ -205,9 +209,11 @@ export default function Home() {
         }
 
         setLoading(false);
+        setCompressingContext(false);
       } catch (error) {
         console.error('Error calling Python API', error);
         setLoading(false);
+        setCompressingContext(false);
       }
     }
   }
@@ -270,7 +276,8 @@ export default function Home() {
         <div className="panel bottom-left">
           <ChatbotPanel 
             active={documentData != null} 
-            loading={loading} 
+            loading={loading}
+            compressingContext={compressingContext}
             onPromptSubmit={handlePromptSubmit} 
             messages={messages} 
             clearContext={clearContext}

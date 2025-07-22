@@ -170,3 +170,31 @@
   color: transparent;
   animation: shine 3s linear infinite;
 }
+
+.compressing-message {
+  position: relative;
+  color: #333;
+  font-weight: 450;
+}
+
+.compressing-message::after {
+  content: 'Compressing context...';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg, 
+    rgba(240,240,240,0) 0%, 
+    rgba(240,240,240,0) 42%, 
+    rgba(255,255,255,0.8) 50%,
+    rgba(240,240,240,0) 58%, 
+    rgba(240,240,240,0) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 3s linear infinite;
+}
