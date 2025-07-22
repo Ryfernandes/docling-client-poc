@@ -33,6 +33,8 @@ class MCPClient:
         self.model = model
         self.context = "None. Start of conversation."
         self.total_cost = 0.0
+        self.is_processing = False
+        self.cancel_requested = False
     
     async def connect_to_server(self, server_url: str = "http://localhost:8000/sse"):
         """Connect to an MCP server_script_path
@@ -67,162 +69,182 @@ class MCPClient:
 
     async def process_monitored_query(self, query: str, seed_document: object, selectedCrefs: list[str], careful: Optional[bool] = True) -> AsyncGenerator[str, None]:
         """Process a query using Claude and available tools with agentic behavior"""
-        # Load the seed document into the context
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "http://localhost:8000/document",
-                json={"document": seed_document}
-            ) as resp:
-                await resp.release()
-
-        # Get content from selected crefs
-        document = DoclingDocument.model_validate(seed_document)
-        selections = [f"{cref}: {self.get_cref_content(document, cref)}" for cref in selectedCrefs]
-
-        messages = []
-        self.query_cost = 0
-
-        messages.append({
-            "role": "user",
-            "content": query
-        })
-
-        response = await self.session.list_tools()
-        available_tools = [{
-            "name": tool.name,
-            "description": tool.description,
-            "input_schema": tool.inputSchema
-        } for tool in response.tools]
-
-        available_tools[-1]["cache_control"] = {"type": "ephemeral"}
+        self.is_processing = True
+        self.cancel_requested = False
         
-        execution_log = []
-        iteration = 0
+        try:
+            # Load the seed document into the context
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "http://localhost:8000/document",
+                    json={"document": seed_document}
+                ) as resp:
+                    await resp.release()
 
-        print(f"Using context: {self.context}")
-        
-        while iteration < self.max_iterations:
-            iteration += 1
+            # Get content from selected crefs
+            document = DoclingDocument.model_validate(seed_document)
+            selections = [f"{cref}: {self.get_cref_content(document, cref)}" for cref in selectedCrefs]
 
-            response = self.anthropic.messages.create(
-                system=[
-                    {
-                        "type": "text",
-                        "text": "You are a Docling Document creation/editing agent that makes changes to a document that is already provided internally. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
-                        "cache_control": {"type": "ephemeral"}
-                    },
-                    {
-                        "type": "text",
-                        "text": f"Previous conversation context: {self.context}",
-                        "cache_control": {"type": "ephemeral"}
-                    },
-                    {
-                        "type": "text",
-                        "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary. Note that when anchors are removed from a document, all other anchors of the same type change values to stay chronological. This affects all operations that require document anchors. To avoid this, delete anchors all at once with a single operation.",
-                    }
-                ],
-                model=self.model,
-                max_tokens=1000,
-                messages=messages,
-                tools=available_tools,
-            )
+            messages = []
+            self.query_cost = 0
 
-            cost = self.aggregate_anthropic_response_info(response, display = True)
-            yield json.dumps({'type': 'cost', 'cost': cost, 'total': round(self.total_cost, 4), 'kind': 'Agent turn'}) + '\n'
-
-            if careful: 
-                quit = input("Quit? ")
-                if quit.lower() == 'y':
-                    break
-
-            has_tool_calls = False
-
-            assistant_message_content = list(response.content)
-            tool_results = []
-            
-            # Process all content in the response
-            for content in response.content:
-                if content.type == "text":
-                    messages.append({
-                        "role": "assistant",
-                        "content": content.text
-                    })
-
-                    yield json.dumps({'type': 'message', 'content': content.text}) + '\n'
-                    
-                elif content.type == "tool_use":
-                    has_tool_calls = True
-                    tool_name = content.name
-                    tool_args = content.input
-                    
-                    print(f"🔧 Calling tool '{tool_name}' with args: {tool_args}")
-                    yield json.dumps({'type': 'tool_call', 'name': tool_name, 'args': tool_args}) + '\n'
-                    
-                    try:
-                        result = await self.session.call_tool(tool_name, tool_args)
-                        result_content = result.content[0].dict()
-
-                        try: 
-                          yield json.dumps({'type': 'tool_result', 'content': result_content}) + '\n'
-                        except Exception as e:
-                            print(f"Error yielding tool result: {e}")
-
-                        result_content = json.loads(result_content['text'])
-
-                        if 'document' in result_content:
-                            del result_content['document']
-                        print(f"✅ Tool result: {result_content}")
-
-                        content_string = json.dumps(result_content, indent=2)
-
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": content.id,
-                            "content": content_string,
-                        })
-                        
-                    except Exception as e:
-                        print(f"❌ Tool error: {str(e)}")
-                        execution_log.append(f"❌ Tool error: {str(e)}")
-                        yield json.dumps({'type': 'tool_error', 'content': str(e)}) + '\n'
-
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": content.id,
-                            "content": f"Error: {str(e)}",
-                            "is_error": True
-                        })
-            
-            # If no tool calls were made, we're done
-            if has_tool_calls:
-                messages.append({"role": "assistant", "content": assistant_message_content})
-                messages.append({"role": "user", "content": tool_results})
-            else:
-                break
-        
-        if iteration >= self.max_iterations:
-            yield json.dumps({'type': 'max_iterations'}) + '\n'
-
-        print(f"💰 Total Cost: ${round(self.query_cost, 4)}")
-
-        print("\nSystem: Compressing conversation context...")
-        
-        summary = self.anthropic.messages.create(
-            model=self.model,
-            max_tokens=200,
-            messages=messages + [{
+            messages.append({
                 "role": "user",
-                "content": "Please provide a brief summary of the conversation so far. Make sure to prioritize the user's goals, actions taken, and any important data like document keys that will be important for the continuation of work. List the most recent actions first"
-            }]
-        )
+                "content": query
+            })
 
-        cost = self.aggregate_anthropic_response_info(summary, display = False)
-        yield json.dumps({'type': 'cost', 'cost': cost, 'total': round(self.total_cost, 4), 'kind': 'Context compression'}) + '\n'
+            response = await self.session.list_tools()
+            available_tools = [{
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.inputSchema
+            } for tool in response.tools]
 
-        self.context = summary.content[0]
+            available_tools[-1]["cache_control"] = {"type": "ephemeral"}
+            
+            execution_log = []
+            iteration = 0
 
-        print(f"New context: {self.context}")
-    
+            print(f"Using context: {self.context}")
+            
+            while iteration < self.max_iterations:
+                # Check if cancellation was requested
+                if self.cancel_requested:
+                    yield json.dumps({'type': 'cancelled', 'message': 'Processing was cancelled by request'}) + '\n'
+                    break
+                    
+                iteration += 1
+
+                response = self.anthropic.messages.create(
+                    system=[
+                        {
+                            "type": "text",
+                            "text": "You are a Docling Document creation/editing agent that makes changes to a document that is already provided internally. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
+                            "cache_control": {"type": "ephemeral"}
+                        },
+                        {
+                            "type": "text",
+                            "text": f"Previous conversation context: {self.context}",
+                            "cache_control": {"type": "ephemeral"}
+                        },
+                        {
+                            "type": "text",
+                            "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary. Note that when anchors are removed from a document, all other anchors of the same type change values to stay chronological. This affects all operations that require document anchors. To avoid this, delete anchors all at once with a single operation.",
+                        }
+                    ],
+                    model=self.model,
+                    max_tokens=1000,
+                    messages=messages,
+                    tools=available_tools,
+                )
+
+                cost = self.aggregate_anthropic_response_info(response, display = True)
+                yield json.dumps({'type': 'cost', 'cost': cost, 'total': round(self.total_cost, 4), 'kind': 'Agent turn'}) + '\n'
+
+                if careful: 
+                    quit = input("Quit? ")
+                    if quit.lower() == 'y':
+                        break
+
+                has_tool_calls = False
+
+                assistant_message_content = list(response.content)
+                tool_results = []
+                
+                # Process all content in the response
+                for content in response.content:
+                    if content.type == "text":
+                        messages.append({
+                            "role": "assistant",
+                            "content": content.text
+                        })
+
+                        yield json.dumps({'type': 'message', 'content': content.text}) + '\n'
+                        
+                    elif content.type == "tool_use":
+                        has_tool_calls = True
+                        tool_name = content.name
+                        tool_args = content.input
+                        
+                        print(f"🔧 Calling tool '{tool_name}' with args: {tool_args}")
+                        yield json.dumps({'type': 'tool_call', 'name': tool_name, 'args': tool_args}) + '\n'
+                        
+                        try:
+                            result = await self.session.call_tool(tool_name, tool_args)
+                            result_content = result.content[0].dict()
+
+                            try: 
+                              yield json.dumps({'type': 'tool_result', 'content': result_content}) + '\n'
+                            except Exception as e:
+                                print(f"Error yielding tool result: {e}")
+
+                            result_content = json.loads(result_content['text'])
+
+                            if 'document' in result_content:
+                                del result_content['document']
+                            print(f"✅ Tool result: {result_content}")
+
+                            content_string = json.dumps(result_content, indent=2)
+
+                            tool_results.append({
+                                "type": "tool_result",
+                                "tool_use_id": content.id,
+                                "content": content_string,
+                            })
+                            
+                        except Exception as e:
+                            print(f"❌ Tool error: {str(e)}")
+                            execution_log.append(f"❌ Tool error: {str(e)}")
+                            yield json.dumps({'type': 'tool_error', 'content': str(e)}) + '\n'
+
+                            tool_results.append({
+                                "type": "tool_result",
+                                "tool_use_id": content.id,
+                                "content": f"Error: {str(e)}",
+                                "is_error": True
+                            })
+                
+                # If no tool calls were made, we're done
+                if has_tool_calls:
+                    messages.append({"role": "assistant", "content": assistant_message_content})
+                    messages.append({"role": "user", "content": tool_results})
+                else:
+                    break
+            
+            if iteration >= self.max_iterations:
+                yield json.dumps({'type': 'max_iterations'}) + '\n'
+
+            print(f"💰 Total Cost: ${round(self.query_cost, 4)}")
+
+            if not self.cancel_requested:
+                print("\nSystem: Compressing conversation context...")
+                
+                summary = self.anthropic.messages.create(
+                    model=self.model,
+                    max_tokens=200,
+                    messages=messages + [{
+                        "role": "user",
+                        "content": "Please provide a brief summary of the conversation so far. Make sure to prioritize the user's goals, actions taken, and any important data like document keys that will be important for the continuation of work. List the most recent actions first"
+                    }]
+                )
+
+                cost = self.aggregate_anthropic_response_info(summary, display = False)
+                yield json.dumps({'type': 'cost', 'cost': cost, 'total': round(self.total_cost, 4), 'kind': 'Context compression'}) + '\n'
+
+                self.context = summary.content[0]
+
+                print(f"New context: {self.context}")
+        finally:
+            self.is_processing = False
+            self.cancel_requested = False
+
+    def cancel_processing(self):
+        """Request cancellation of the current processing task"""
+        if self.is_processing:
+            self.cancel_requested = True
+            return True
+        return False
+
     def clear_context(self):
         """Clear the conversation context"""
         self.context = "None. Start of conversation."

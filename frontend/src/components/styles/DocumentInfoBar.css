@@ -55,7 +55,7 @@
   transition: background-color 0.2s;
 }
 
-.icon-button:hover {
+.icon-button.enabled:hover {
   background-color: rgba(0, 102, 204, 0.1);
 }
 

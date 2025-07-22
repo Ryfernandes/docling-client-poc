@@ -21,6 +21,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [costs, setCosts] = useState<{ kind: string; cost: number; total: number }[]>([]);
+  const [canceling, setCanceling] = useState(false);
 
   const scrollBoxRef = useRef<HTMLDivElement>(null);
   const numMessages = useRef(0);
@@ -190,6 +191,16 @@ export default function Home() {
                 }
               ]);
             }
+            if (json.type === 'cancelled') {
+              setMessages(prevMessages => [...prevMessages, 
+                {
+                  id: id,
+                  text: "Execution cancelled.",
+                  sender: 'bot',
+                  timestamp: new Date()
+                }
+              ]);
+            }
           }
         }
 
@@ -219,6 +230,32 @@ export default function Home() {
     clearContext();
   }
 
+  const handleCancellation = async () => {
+    try {
+      if (canceling) return;
+
+      setCanceling(true);
+
+      const response = await fetch("http://127.0.0.1:8001/stop_processing/", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error cancelling processing:', errorData);
+        return;
+      }
+      
+      setLoading(false);
+      setCanceling(false);
+    } catch (error) {
+      console.error('Error cancelling processing:', error);
+    }
+  };
+
   return (
     <div className="page-container">
       <div className="left">
@@ -231,7 +268,15 @@ export default function Home() {
           </div>
         </div>
         <div className="panel bottom-left">
-          <ChatbotPanel active={documentData != null} loading={loading} onPromptSubmit={handlePromptSubmit} messages={messages} clearContext={clearContext} />
+          <ChatbotPanel 
+            active={documentData != null} 
+            loading={loading} 
+            onPromptSubmit={handlePromptSubmit} 
+            messages={messages} 
+            clearContext={clearContext}
+            onCancel={handleCancellation} 
+            canceling={canceling}
+          />
         </div>
       </div>
       <div className="panel right">

@@ -37,3 +37,11 @@ async def send_message(message: ChatMessage):
 async def clear_context():
     mcp_client.clear_context()
     return {"message": "Context cleared."}
+
+@app.post("/stop_processing/")
+async def stop_processing():
+    """Stop any currently running query processing"""
+    if mcp_client.cancel_processing():
+        return {"message": "Processing cancellation requested"}
+    else:
+        return {"message": "No active query processing"}

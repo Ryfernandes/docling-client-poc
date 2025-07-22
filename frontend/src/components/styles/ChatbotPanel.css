@@ -124,7 +124,12 @@
   color: #0066cc;
 }
 
-.reload-icon:hover {
+.reload-icon.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reload-icon.enabled:hover {
   background-color: rgba(0, 102, 204, 0.1);
 }
 

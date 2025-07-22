@@ -105,7 +105,7 @@ const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
       </div>
       
       <div className="document-actions">
-        <label className="icon-button upload-icon" title={currentDocument ? 'Change Document' : 'Upload Document'}>
+        <label className="icon-button enabled upload-icon" title={currentDocument ? 'Change Document' : 'Upload Document'}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="17 8 12 3 7 8"/>
@@ -122,7 +122,7 @@ const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
         
         {currentDocument && (
           <>
-            <button className="icon-button download-icon" onClick={handleDownload} title="Download Document">
+            <button className="icon-button enabled download-icon" onClick={handleDownload} title="Download Document">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
@@ -130,7 +130,7 @@ const DocumentInfoBar: React.FC<DocumentInfoBarProps> = ({
               </svg>
             </button>
             
-            <button className="icon-button remove-icon" onClick={handleDocumentRemove} title="Remove Document">
+            <button className="icon-button enabled remove-icon" onClick={handleDocumentRemove} title="Remove Document">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
