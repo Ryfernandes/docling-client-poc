@@ -52,6 +52,10 @@ class MCPClient:
         tools = response.tools
         print("\nConnected to server with tools:", [tool.name for tool in tools])
 
+        print("Resetting cost...")
+        self.query_cost = 0.0
+        self.total_cost = 0.0
+
     def get_cref_content(self, doc: DoclingDocument, cref: str) -> NodeItem:
         ref = RefItem(cref=cref)
         node = ref.resolve(doc=doc)
