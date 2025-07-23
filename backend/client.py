@@ -119,7 +119,17 @@ class MCPClient:
                     system=[
                         {
                             "type": "text",
-                            "text": "You are a Docling Document creation/editing agent that makes changes to a document that is already provided internally. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication.",
+                            "text": 
+                            """
+                            You are a Docling Document creation/editing agent that makes changes to a document that is already provided internally. Avoid repeating lines or mirroring the user's question. Be concise and avoid duplication. 
+                            If you encounter an error caused by a user's demand, briefly ask for clarification rather than adjusting the demand.
+                            Think carefully about the difference between "adding" items to the end of a document and "inserting" items at a specific position. More often than not, you will want to insert items at a specific position.
+
+                            Consider the following advice when taking actions:
+                            - When anchors are removed from a document, all other anchors of the same type change values to stay chronological. This can cause errors in all subsequent operations that require document anchors. To avoid this, delete anchors all at once with a single operation and always make deletion the last step.
+                            - Whenever there is a need to replace on element with another, insert the new element at the original position of the old element (using a sibling_anchor) while deleting the old one.
+                            - Always make deletion the final step of an operation. This ensures that all other anchors are updated correctly and anchor positions do not shift.
+                            """,
                             "cache_control": {"type": "ephemeral"}
                         },
                         {
@@ -129,7 +139,7 @@ class MCPClient:
                         },
                         {
                             "type": "text",
-                            "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary. Note that when anchors are removed from a document, all other anchors of the same type change values to stay chronological. This affects all operations that require document anchors. To avoid this, delete anchors all at once with a single operation.",
+                            "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary.",
                         }
                     ],
                     model=self.model,
@@ -172,6 +182,9 @@ class MCPClient:
                         try:
                             result = await self.session.call_tool(tool_name, tool_args)
                             result_content = result.content[0].dict()
+                            
+                            if result.isError:
+                                raise Exception({result_content['text']})
 
                             try: 
                               yield json.dumps({'type': 'tool_result', 'content': result_content}) + '\n'
