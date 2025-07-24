@@ -20,6 +20,7 @@ from docling_core.types.doc.document import (
   NodeItem,
   RefItem,
   TextItem,
+  TableItem,
 )
 
 load_dotenv()
@@ -64,6 +65,9 @@ class MCPClient:
 
         if isinstance(node, TextItem):
             return f"'{node.label}' item. Text at document anchor {cref}: '{node.text}'"
+        if isinstance(node, TableItem):
+            print(f"Table item selected: {node.export_to_html(doc=doc)}")
+            return f"'{node.label}' item. HTML representation of the table at document anchor {cref}: {node.export_to_html(doc=doc)}"
         else:
             return f"'{node.label}' item (no text content)"        
 
@@ -139,7 +143,7 @@ class MCPClient:
                         },
                         {
                             "type": "text",
-                            "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors is also included. Use these to inform your response and only gather more information as necessary.",
+                            "text": f"The following document anchors have been selected by the user: {', '.join(selections)}. The text of selected text anchors and HTML representations of selected table anchors are also included. Use these to inform your response and only gather more information as necessary.",
                         }
                     ],
                     model=self.model,
