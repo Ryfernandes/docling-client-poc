@@ -151,17 +151,6 @@ export default function Home() {
                   setDocumentData(doc);
                 }
               }
-
-              /*
-              setMessages(prevMessages => [...prevMessages, 
-                {
-                  id: id,
-                  text: "✅ Tool call successful",
-                  sender: 'bot',
-                  timestamp: new Date()
-                }
-              ]);
-              */
             }
             if (json.type === 'tool_error') {
               setMessages(prevMessages => [...prevMessages, 
