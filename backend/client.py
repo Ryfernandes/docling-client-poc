@@ -64,12 +64,12 @@ class MCPClient:
         node = ref.resolve(doc=doc)
 
         if isinstance(node, TextItem):
-            return f"'{node.label}' item. Text at document anchor {cref}: '{node.text}'"
+            return f"'{node.label}' item{f' with parent {node.parent}' if node.parent is not None and node.parent != doc.body.get_ref() else ''}. Text at document anchor {cref}: '{node.text}'"
         if isinstance(node, TableItem):
             print(f"Table item selected: {node.export_to_html(doc=doc)}")
-            return f"'{node.label}' item. HTML representation of the table at document anchor {cref}: {node.export_to_html(doc=doc)}"
+            return f"'{node.label}' item{f' with parent {node.parent}' if node.parent is not None and node.parent != doc.body.get_ref() else ''}. HTML representation of the table at document anchor {cref}: {node.export_to_html(doc=doc)}"
         else:
-            return f"'{node.label}' item (no text content)"        
+            return f"'{node.label}' item{f' with parent {node.parent}' if node.parent is not None and node.parent != doc.body.get_ref() else ''} (no text content)"        
 
     async def process_monitored_query(self, query: str, seed_document: object, selectedCrefs: list[str], careful: Optional[bool] = True) -> AsyncGenerator[str, None]:
         """Process a query using Claude and available tools with agentic behavior"""
@@ -88,6 +88,8 @@ class MCPClient:
             # Get content from selected crefs
             document = DoclingDocument.model_validate(seed_document)
             selections = [f"{cref}: {self.get_cref_content(document, cref)}" for cref in selectedCrefs]
+
+            print(selections)
 
             messages = []
             self.query_cost = 0
