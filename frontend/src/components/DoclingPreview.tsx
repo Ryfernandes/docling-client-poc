@@ -10,13 +10,14 @@ interface DoclingPreviewProps {
   data: any;
   setSelectedCrefs: React.Dispatch<React.SetStateAction<string[]>>;
   scrollBoxRef: React.RefObject<HTMLDivElement | null>;
+  selected: boolean[];
+  setSelected: React.Dispatch<React.SetStateAction<boolean[]>>;
 }
 
-const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs, scrollBoxRef }) => {
+const DoclingPreview:React.FC<DoclingPreviewProps> = ({ data, setSelectedCrefs, scrollBoxRef, selected, setSelected }) => {
   const [document, setDocument] = useState<DoclingDocument>({} as DoclingDocument);
   const [items, setItems] = useState<any[]>([]);
   const [crefs, setCrefs] = useState<string[]>([]);
-  const [selected, setSelected] = useState<boolean[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
   useEffect(() => {

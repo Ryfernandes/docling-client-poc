@@ -33,6 +33,8 @@ export default function Home() {
   const [canceling, setCanceling] = useState(false);
   const [compressingContext, setCompressingContext] = useState(false);
 
+  const [selected, setSelected] = useState<boolean[]>([]);
+
   const scrollBoxRef = useRef<HTMLDivElement>(null);
   const numMessages = useRef(0);
 
@@ -112,6 +114,7 @@ export default function Home() {
 
       setMessages([]);
       setSelectedCrefs([]);
+      setSelected(prev => prev.map(() => false));
     } catch (error) {
       console.error('Error clearing context', error);
     }
@@ -349,7 +352,7 @@ export default function Home() {
           onDocumentLoad={handleDocumentLoad}
           onDocumentRemove={handleDocumentRemove}
         />
-        <DoclingPreview data={endDocument} setSelectedCrefs={setSelectedCrefs} scrollBoxRef={scrollBoxRef}/>
+        <DoclingPreview data={endDocument} setSelectedCrefs={setSelectedCrefs} scrollBoxRef={scrollBoxRef} selected={selected} setSelected={setSelected}/>
       </div>
     </div>
   );
