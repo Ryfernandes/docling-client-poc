@@ -16,9 +16,11 @@ const jsondiffpatch = create()
 export default function Home() {
   const MAX_STACK_SIZE = 20; // Maximum number of document diffs to keep in the history stack
 
-  const [startDocument, setStartDocument] = useState<object | null>(null);
+  const historyPointer = useRef(-1);
+  const startDocumentRef = useRef<object | null>(null);
+  const endDocumentRef = useRef<object | null>(null);
   const [endDocument, setEndDocument] = useState<object | null>(null);
-  const [documentStack, setDocumentStack] = useState<Delta[]>([]);
+  const documentStack = useRef<Delta[]>([]);
   const [documentInfo, setDocumentInfo] = useState<{
     name: string;
     size: number;
@@ -48,37 +50,55 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    console.log("Document stack updated:", documentStack);
-  }, [documentStack]);
+  }, [documentStack.current]);
 
   const addToDocumentStack = (newDocument: any) => {
-    const startClone = JSON.parse(JSON.stringify(startDocument));
-    const endClone = JSON.parse(JSON.stringify(endDocument));
+    const startClone = JSON.parse(JSON.stringify(startDocumentRef.current));
+    const endClone = JSON.parse(JSON.stringify(endDocumentRef.current));
 
     const delta = jsondiffpatch.diff(endClone, newDocument);
     if (delta) {
-      setDocumentStack(prevStack => [...prevStack, delta]);
+      documentStack.current = [...documentStack.current.slice(0, historyPointer.current + 1), delta];
+      historyPointer.current += 1;
     }
     setEndDocument(newDocument);
+    endDocumentRef.current = newDocument;
 
-    if (documentStack.length > MAX_STACK_SIZE) {
-      const newStart = jsondiffpatch.patch(startClone, documentStack[0]) as object;
-      setStartDocument(newStart);
+    if (documentStack.current.length > MAX_STACK_SIZE) {
+      const newStart = jsondiffpatch.patch(startClone, documentStack.current[0]) as object;
+      startDocumentRef.current = newStart;
 
-      setDocumentStack(prevStack => prevStack.slice(1));
+      documentStack.current = documentStack.current.slice(1);
+      historyPointer.current -= 1;
     }
   }
 
   const handleUndo = () => {
-    if (documentStack.length === 0) return;
+    if (historyPointer.current < 0) return;
 
-    const endClone = JSON.parse(JSON.stringify(endDocument));
+    const endClone = JSON.parse(JSON.stringify(endDocumentRef.current));
 
-    const lastDelta = documentStack[documentStack.length - 1];
-    const newDocument = jsondiffpatch.unpatch(endClone, lastDelta) as object;
+    const prevDelta = documentStack.current[historyPointer.current];
+    const newDocument = jsondiffpatch.unpatch(endClone, prevDelta) as object;
 
     setEndDocument(newDocument);
-    setDocumentStack(prevStack => prevStack.slice(0, -1));
+    endDocumentRef.current = newDocument;
+
+    historyPointer.current -= 1;
+  }
+
+  const handleRedo = () => {
+    if (documentStack.current.length - 1 === historyPointer.current) return;
+
+    const endClone = JSON.parse(JSON.stringify(endDocumentRef.current));
+
+    const nexDelta = documentStack.current[historyPointer.current + 1];
+    const newDocument = jsondiffpatch.patch(endClone, nexDelta) as object;
+
+    setEndDocument(newDocument);
+    endDocumentRef.current = newDocument;
+
+    historyPointer.current += 1;
   }
 
   const clearContext = async () => {
@@ -87,8 +107,7 @@ export default function Home() {
         method: "POST",
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ query: prompt, document: endDocument, selectedCrefs: selectedCrefs })
+        }
       });
 
       setMessages([]);
@@ -99,7 +118,7 @@ export default function Home() {
   }
 
   const handlePromptSubmit = async (prompt: string) => {
-    if (endDocument) {
+    if (endDocumentRef.current) {
        try {
         setMessages(prevMessages => [...prevMessages, 
           {
@@ -117,7 +136,7 @@ export default function Home() {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ query: prompt, document: endDocument, selectedCrefs: selectedCrefs })
+          body: JSON.stringify({ query: prompt, document: endDocumentRef.current, selectedCrefs: selectedCrefs })
         });
 
         if (!response.body) {
@@ -138,8 +157,6 @@ export default function Home() {
           const parts = buffer.split("\n");
           buffer = parts.pop() || "";
 
-          console.log(parts);
-
           for (const part of parts) {
             numMessages.current += 1;
             const id = numMessages.current.toString();
@@ -148,8 +165,6 @@ export default function Home() {
             if (!line) continue;
 
             let json;
-
-            console.log(line);
 
             try {
               json = JSON.parse(line);
@@ -249,8 +264,11 @@ export default function Home() {
   }
 
   const handleDocumentLoad = (document: any) => {
-    setStartDocument(document.data);
+    startDocumentRef.current = document.data;
     setEndDocument(document.data);
+    endDocumentRef.current = document.data;
+    documentStack.current = [];
+    historyPointer.current = -1;
     setDocumentInfo({
       name: document.name,
       size: document.size,
@@ -262,8 +280,11 @@ export default function Home() {
   }
   
   const handleDocumentRemove = () => {
-    setStartDocument(null);
+    startDocumentRef.current = null;
     setEndDocument(null);
+    endDocumentRef.current = null;
+    documentStack.current = [];
+    historyPointer.current = -1;
     clearContext();
   }
 
@@ -315,7 +336,9 @@ export default function Home() {
             onCancel={handleCancellation} 
             canceling={canceling}
             onUndo={handleUndo}
-            canUndo={documentStack.length > 0}
+            canUndo={historyPointer.current >= 0}
+            onRedo={handleRedo}
+            canRedo={historyPointer.current < documentStack.current.length - 1}
           />
         </div>
       </div>
