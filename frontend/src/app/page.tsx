@@ -3,6 +3,7 @@
 import "./page.css";
 
 import { useState, useEffect, useRef } from "react";
+import { type Delta, create } from 'jsondiffpatch';
 
 import ChatbotPanel, { Message } from "@/components/ChatbotPanel"
 import DoclingPreview from "@/components/DoclingPreview";
@@ -10,8 +11,14 @@ import DocumentInfoBar from "@/components/DocumentInfoBar";
 import SelectionInfo from "@/components/SelectionInfo";
 import CostInfo from "@/components/CostInfo";
 
+const jsondiffpatch = create()
+
 export default function Home() {
-  const [documentData, setDocumentData] = useState<object | null>(null);
+  const MAX_STACK_SIZE = 20; // Maximum number of document diffs to keep in the history stack
+
+  const [startDocument, setStartDocument] = useState<object | null>(null);
+  const [endDocument, setEndDocument] = useState<object | null>(null);
+  const [documentStack, setDocumentStack] = useState<Delta[]>([]);
   const [documentInfo, setDocumentInfo] = useState<{
     name: string;
     size: number;
@@ -40,6 +47,40 @@ export default function Home() {
     setup();
   }, []);
 
+  useEffect(() => {
+    console.log("Document stack updated:", documentStack);
+  }, [documentStack]);
+
+  const addToDocumentStack = (newDocument: any) => {
+    const startClone = JSON.parse(JSON.stringify(startDocument));
+    const endClone = JSON.parse(JSON.stringify(endDocument));
+
+    const delta = jsondiffpatch.diff(endClone, newDocument);
+    if (delta) {
+      setDocumentStack(prevStack => [...prevStack, delta]);
+    }
+    setEndDocument(newDocument);
+
+    if (documentStack.length > MAX_STACK_SIZE) {
+      const newStart = jsondiffpatch.patch(startClone, documentStack[0]) as object;
+      setStartDocument(newStart);
+
+      setDocumentStack(prevStack => prevStack.slice(1));
+    }
+  }
+
+  const handleUndo = () => {
+    if (documentStack.length === 0) return;
+
+    const endClone = JSON.parse(JSON.stringify(endDocument));
+
+    const lastDelta = documentStack[documentStack.length - 1];
+    const newDocument = jsondiffpatch.unpatch(endClone, lastDelta) as object;
+
+    setEndDocument(newDocument);
+    setDocumentStack(prevStack => prevStack.slice(0, -1));
+  }
+
   const clearContext = async () => {
     try {
       await fetch("http://127.0.0.1:8001/clear_context/", {
@@ -47,7 +88,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ query: prompt, document: documentData, selectedCrefs: selectedCrefs })
+        body: JSON.stringify({ query: prompt, document: endDocument, selectedCrefs: selectedCrefs })
       });
 
       setMessages([]);
@@ -58,7 +99,7 @@ export default function Home() {
   }
 
   const handlePromptSubmit = async (prompt: string) => {
-    if (documentData) {
+    if (endDocument) {
        try {
         setMessages(prevMessages => [...prevMessages, 
           {
@@ -76,7 +117,7 @@ export default function Home() {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ query: prompt, document: documentData, selectedCrefs: selectedCrefs })
+          body: JSON.stringify({ query: prompt, document: endDocument, selectedCrefs: selectedCrefs })
         });
 
         if (!response.body) {
@@ -148,7 +189,7 @@ export default function Home() {
                 if ('document' in json_text) {
                   const doc = json_text.document;
 
-                  setDocumentData(doc);
+                  addToDocumentStack(doc);
                 }
               }
             }
@@ -208,7 +249,8 @@ export default function Home() {
   }
 
   const handleDocumentLoad = (document: any) => {
-    setDocumentData(document.data);
+    setStartDocument(document.data);
+    setEndDocument(document.data);
     setDocumentInfo({
       name: document.name,
       size: document.size,
@@ -220,8 +262,8 @@ export default function Home() {
   }
   
   const handleDocumentRemove = () => {
-    setDocumentData(null);
-    setDocumentInfo(null);
+    setStartDocument(null);
+    setEndDocument(null);
     clearContext();
   }
 
@@ -264,7 +306,7 @@ export default function Home() {
         </div>
         <div className="panel bottom-left">
           <ChatbotPanel 
-            active={documentData != null} 
+            active={endDocument != null} 
             loading={loading}
             compressingContext={compressingContext}
             onPromptSubmit={handlePromptSubmit} 
@@ -272,17 +314,19 @@ export default function Home() {
             clearContext={clearContext}
             onCancel={handleCancellation} 
             canceling={canceling}
+            onUndo={handleUndo}
+            canUndo={documentStack.length > 0}
           />
         </div>
       </div>
       <div className="panel right">
         <DocumentInfoBar
           currentDocument={documentInfo}
-          documentData={documentData}
+          documentData={endDocument}
           onDocumentLoad={handleDocumentLoad}
           onDocumentRemove={handleDocumentRemove}
         />
-        <DoclingPreview data={documentData} setSelectedCrefs={setSelectedCrefs} scrollBoxRef={scrollBoxRef}/>
+        <DoclingPreview data={endDocument} setSelectedCrefs={setSelectedCrefs} scrollBoxRef={scrollBoxRef}/>
       </div>
     </div>
   );

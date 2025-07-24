@@ -22,9 +22,22 @@ interface ChatbotPanelProps {
   active: boolean;
   onCancel?: () => void;
   canceling?: boolean;
+  onUndo?: () => void;
+  canUndo?: boolean;
 }
 
-const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, loading, compressingContext, clearContext, active, onCancel, canceling }) => {
+const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ 
+  onPromptSubmit, 
+  messages, 
+  loading, 
+  compressingContext, 
+  clearContext, 
+  active, 
+  onCancel, 
+  canceling,
+  onUndo,
+  canUndo
+}) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +85,14 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({ onPromptSubmit, messages, l
           </span>
         </div>
         <div className="document-actions">
+          {canUndo && !loading && onUndo && (
+            <button className="icon-button enabled reload-icon" onClick={onUndo} title="Undo last action">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7v6h6"></path>
+                <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+              </svg>
+            </button>
+          )}
           {loading && onCancel && (
             <button className={`icon-button reload-icon ${canceling ? 'disabled' : 'enabled'}`} onClick={onCancel} title="Cancel processing" disabled={canceling}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
