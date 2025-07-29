@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from client import MCPClient
 
+# claude-3-5-sonnet-20241022
 mcp_client = MCPClient(model="claude-sonnet-4-20250514")
 
 app = FastAPI()
